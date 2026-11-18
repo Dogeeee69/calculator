@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#172554">
+<title>黑騎士補品計算器</title>
+<style>
+:root{color-scheme:light;--navy:#172554;--blue:#2563eb;--bg:#f3f6fb;--muted:#64748b;--line:#e2e8f0}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",sans-serif;color:#172033;padding:24px 14px}
+main{max-width:620px;margin:0 auto}
+header{background:linear-gradient(135deg,#172554,#1d4ed8);color:white;border-radius:22px;padding:25px 22px;margin-bottom:16px}
+h1{font-size:25px;margin:0 0 8px}
+header p{margin:0;color:#dbeafe;line-height:1.6;font-size:14px}
+.panel{background:white;border:1px solid var(--line);border-radius:18px;padding:20px;margin-bottom:14px;box-shadow:0 5px 18px rgba(15,23,42,.04)}
+h2{font-size:17px;margin:0 0 16px}
+label{display:block;font-size:14px;font-weight:650;margin:13px 0 7px}
+input{width:100%;font:inherit;font-size:18px;padding:13px 14px;border:1px solid #cbd5e1;border-radius:11px;outline:none}
+input:focus{border-color:var(--blue);box-shadow:0 0 0 3px #dbeafe}
+.hint{font-size:12px;color:var(--muted);line-height:1.6;margin-top:6px}
+.result{background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px;padding:17px;margin:12px 0}
+.kicker{font-size:12px;color:#475569;font-weight:700}
+.big{font-size:27px;font-weight:800;color:#1d4ed8;margin:5px 0 2px}
+.sub{font-size:13px;color:#475569}
+.water{background:#f0fdf4;border-color:#bbf7d0}
+.water .big{color:#15803d}
+table{width:100%;border-collapse:collapse;font-size:14px;margin-top:8px}
+td{padding:10px 3px;border-bottom:1px solid var(--line)}
+td:last-child{text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+button{border:0;border-radius:11px;padding:13px 16px;font:inherit;font-weight:700;cursor:pointer}
+.primary{width:100%;background:var(--navy);color:white;margin-top:14px}
+.secondary{background:#eaf0f9;color:#1e293b;width:100%;margin-top:9px}
+.note{font-size:12px;line-height:1.7;color:var(--muted)}
+.error{color:#b91c1c;font-weight:650;font-size:13px;margin-top:10px}
+footer{text-align:center;color:#94a3b8;font-size:12px;padding:8px}
+@media(min-width:560px){body{padding-top:38px}.panel{padding:23px}}
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>⚔️ 黑騎士補品計算器</h1>
+  <p>輸入原生血量與開啟聖火後的最大血量，自動計算建議補品及寵物喝水門檻。</p>
+</header>
+
+<section class="panel">
+  <h2>① 輸入角色血量</h2>
+  <label for="a">A｜裸體原生最大血量</label>
+  <input id="a" type="number" inputmode="numeric" min="1" step="1" value="10068" placeholder="例如：10068">
+  <div class="hint">未穿裝備、未開聖火時的最大血量。</div>
+
+  <label for="b">B｜穿上裝備並開啟聖火後的最大血量</label>
+  <input id="b" type="number" inputmode="numeric" min="1" step="1" value="16991" placeholder="例如：16991">
+  <div class="hint">請直接填遊戲中顯示的最大血量，已包含裝備與聖火加成。</div>
+  <button class="secondary" id="reset">恢復範例數值</button>
+</section>
+
+<section class="panel" aria-live="polite">
+  <h2>② 計算結果</h2>
+  <div class="result">
+    <div class="kicker">建議攜帶補品</div>
+    <div class="big" id="potion">起司｜4,000 HP</div>
+    <div class="sub" id="gapText">重疊區間：4,311 HP</div>
+  </div>
+  <div class="result water">
+    <div class="kicker">寵物自動喝水門檻</div>
+    <div class="big" id="water">29.63%</div>
+    <div class="sub">將此百分比設定為寵物自動喝水門檻。</div>
+  </div>
+  <table>
+    <tbody>
+      <tr><td>龍吼最低血量（A × 50%）</td><td id="dragon">5,034</td></tr>
+      <tr><td>黑力觸發門檻（B × 55%）</td><td id="dark">9,345</td></tr>
+      <tr><td>黑力與龍吼重疊區間</td><td id="overlap">4,311</td></tr>
+      <tr><td>寵物喝水門檻</td><td id="waterRow">29.63%</td></tr>
+    </tbody>
+  </table>
+  <div id="warning" class="error" hidden></div>
+  <button class="primary" id="copy">複製計算結果</button>
+  <div class="hint" id="copyStatus" role="status"></div>
+</section>
+
+<section class="panel">
+  <h2>③ 計算方式</h2>
+  <p class="note"><b>補品選擇：</b>（B × 55%）－（A × 50%），選擇恢復量最接近但不超過計算結果的補品。</p>
+  <p class="note"><b>喝水門檻：</b>（A × 50%）÷ B × 100%。</p>
+  <p class="note"><b>可選補品：</b>馴鹿奶 5,000 HP、起司 4,000 HP、冰棒 2,000 HP、烤鰻魚 1,000 HP。</p>
+  <p class="note">計算結果依照上述技能血量判定與補品選擇公式提供，實際練功仍請留意龍吼扣血、怪物傷害及遊戲內寵物喝水判定方式。</p>
+</section>
+<footer>黑騎士補品計算器｜可自由分享使用</footer>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const fmt = n => Math.round(n).toLocaleString('en-US');
+const potions = [
+  {name:'馴鹿奶', hp:5000},
+  {name:'起司', hp:4000},
+  {name:'冰棒', hp:2000},
+  {name:'烤鰻魚', hp:1000}
+];
+let latest = '';
+
+function calculate(){
+  const A = Number($('a').value);
+  const B = Number($('b').value);
+  const warning = $('warning');
+  warning.hidden = true;
+
+  if(!Number.isFinite(A) || !Number.isFinite(B) || A <= 0 || B <= 0){
+    $('potion').textContent = '請輸入有效血量';
+    $('gapText').textContent = '原生血量與聖火後最大血量都必須大於 0';
+    $('water').textContent = '—';
+    ['dragon','dark','overlap','waterRow'].forEach(id => $(id).textContent = '—');
+    $('copyStatus').textContent = '';
+    latest = '';
+    return;
+  }
+
+  const dragon = A * 0.5;
+  const dark = B * 0.55;
+  const gap = dark - dragon;
+  const water = dragon / B * 100;
+  const potion = potions.find(p => p.hp <= gap);
+
+  $('dragon').textContent = fmt(dragon);
+  $('dark').textContent = fmt(dark);
+  $('overlap').textContent = fmt(gap);
+  $('waterRow').textContent = water.toFixed(2) + '%';
+  $('water').textContent = water.toFixed(2) + '%';
+  $('gapText').textContent = '重疊區間：' + fmt(gap) + ' HP';
+
+  if(potion){
+    $('potion').textContent = potion.name + '｜' + potion.hp.toLocaleString('en-US') + ' HP';
+  }else{
+    $('potion').textContent = '目前沒有合適的補品';
+    warning.hidden = false;
+    warning.textContent = gap < 1000
+      ? '重疊區間不足 1,000 HP，低於目前最小補品恢復量。'
+      : '請確認輸入數值。';
+  }
+
+  latest = [
+    '【黑騎士補品計算結果】',
+    '原生血量（A）：' + fmt(A),
+    '聖火後最大血量（B）：' + fmt(B),
+    '龍吼最低血量：' + fmt(dragon),
+    '黑力觸發門檻：' + fmt(dark),
+    '重疊區間：' + fmt(gap),
+    '建議補品：' + (potion ? potion.name + '（' + potion.hp + ' HP）' : '目前沒有合適的補品'),
+    '寵物喝水門檻：' + water.toFixed(2) + '%'
+  ].join('\\n');
+}
+$('a').addEventListener('input', calculate);
+$('b').addEventListener('input', calculate);
+$('reset').addEventListener('click', () => {
+  $('a').value = '10068';
+  $('b').value = '16991';
+  calculate();
+});
+$('copy').addEventListener('click', async () => {
+  if(!latest){ $('copyStatus').textContent = '請先輸入有效的血量數值。'; return; }
+  try{
+    await navigator.clipboard.writeText(latest);
+    $('copyStatus').textContent = '已複製，可以貼到 Discord 或聊天群組。';
+  }catch(e){
+    $('copyStatus').textContent = '瀏覽器未允許自動複製，請手動選取計算結果。';
+  }
+});
+calculate();
+</script>
+</body>
+</html>
